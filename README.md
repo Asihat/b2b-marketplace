@@ -1,0 +1,161 @@
+# B2B / B2C Marketplace (Laravel + Docker)
+
+An open-source, copy-and-go marketplace core. It ships the building blocks every
+B2B (and B2C) marketplace needs: authentication, a multi-language product
+catalog, product **analogs / cross-references**, multi-currency pricing with B2B
+volume tiers, orders, and a pluggable **payment gateway interface**.
+
+Everything is open source.
+
+- **Backend:** Laravel 13 + **Octane (FrankenPHP)** · PostgreSQL 16 · Nginx ·
+  PHP 8.4. The app is booted once and kept in memory by Octane workers (no
+  per-request framework bootstrap), with Nginx as a reverse proxy in front.
+  Cache & sessions use the local **filesystem** (no Redis/Memcached required).
+- **Frontend:** React 19 · Vite 6 · TypeScript · Tailwind CSS v4 — a SPA
+  storefront that consumes the API.
+
+## Quick start (one command)
+
+```bash
+docker compose up --build
+```
+
+That builds everything, starts PostgreSQL + Nginx + PHP-FPM + the Vite dev
+server, waits for the DB, runs migrations, and seeds demo data. Then open:
+
+- **Storefront (React):** <http://localhost:5173>
+- API base: <http://localhost:8080/api>
+- Health check: <http://localhost:8080/up>
+
+To change ports / DB credentials, copy `.env.example` to `.env` at the repo root
+(values are read by `docker-compose.yml`) — or just edit the defaults inline.
+
+## Seeded catalog
+
+The seeder generates **~90 products across 6 categories** (electronics,
+industrial, office, tools, packaging, safety), each with **3 images** and
+organized into product *families* whose variants are automatically linked as
+**analogs**. Images use deterministic [Picsum](https://picsum.photos)
+placeholder URLs (real photos, no files to store) — swap them for your own URLs
+in the admin Product editor (one URL per line, first = primary).
+
+## Seeded demo accounts
+
+| Role          | Email                     | Password   | Type |
+|---------------|---------------------------|------------|------|
+| Admin         | admin@marketplace.test    | password   | b2b  |
+| B2B buyer     | buyer@acme.test           | password   | b2b  |
+| B2C customer  | customer@example.test     | password   | b2c  |
+
+## Core concepts
+
+- **Auth** — token-based via Laravel Sanctum. `POST /api/auth/register` and
+  `/login` return a bearer token. B2B registration creates/attaches a `Company`.
+- **Products & catalog** — categories, SKUs, brands, stock, MOQ (min order qty),
+  and a `is_b2b_only` flag that hides items from B2C buyers.
+- **Analogs** — interchangeable/substitute products via `product_analogs`
+  (`equivalent | substitute | upgrade`). See `GET /api/products/{id}/analogs`.
+- **Currency** — prices stored in a base currency, converted via per-currency
+  exchange rates, with optional fixed overrides and **B2B volume tiers**
+  (`product_prices.min_qty`). Pass `?currency=EUR&qty=500`.
+- **Languages** — `Accept-Language`, `?lang=ru`, or the user's saved locale drives
+  translated product/category names (`product_translations`).
+- **Payments** — every provider implements `App\Contracts\PaymentGateway`.
+  Built-in drivers: `fake` (sandbox) and `manual` (bank transfer). Add Stripe/etc.
+  by implementing the interface and registering it in `PaymentManager`.
+
+## API tour
+
+```bash
+# Browse catalog in euros
+curl 'http://localhost:8080/api/products?currency=EUR&search=cable'
+
+# Register a B2B buyer
+curl -X POST http://localhost:8080/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Jo","email":"jo@biz.test","password":"password","type":"b2b","company_name":"Biz LLC"}'
+
+# Place + pay an order (use the token from login/register)
+TOKEN=...
+curl -X POST http://localhost:8080/api/orders -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"items":[{"product_id":1,"quantity":2}],"currency_code":"USD"}'
+curl -X POST http://localhost:8080/api/orders/1/pay -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"gateway":"fake"}'
+```
+
+## Admin panel
+
+Sign in as the admin account and a **Admin** link appears in the header
+(or go straight to <http://localhost:5173/admin>). The panel is part of the same
+React SPA, guarded client-side by role and server-side by the `EnsureAdmin`
+middleware on every `/api/admin/*` route.
+
+- **Dashboard** — user/order/product counts, pending orders, revenue per
+  currency, recent orders, lowest-stock products
+- **Orders** — list/filter/search all orders, change status (pending → paid →
+  processing → shipped → completed / cancelled)
+- **Products** — full CRUD (price, stock, MOQ, category, B2B-only, active)
+- **Categories** — CRUD with parent/position/active
+- **Users** — CRUD, change role (customer/manager/admin) and type (b2b/b2c),
+  reset password, activate/deactivate
+- **Companies** — review B2B companies and toggle verification
+- **Currencies** — CRUD + exchange rates; saving flushes the price cache so the
+  storefront reflects new rates immediately
+
+Only `admin@marketplace.test` has access by default; other accounts get `403`.
+
+## Storefront features (React SPA)
+
+- Catalog grid with live search + category filter
+- Product detail page with **analogs / cross-references** and live **B2B
+  volume-tier** pricing as quantity changes
+- Header **currency** and **language** switchers (drive API `currency`/`lang`)
+- Token auth (login + B2B/B2C registration), demo accounts pre-filled
+- Client-side cart → checkout → pay via selected gateway → order history
+
+The SPA stores its Sanctum token in `localStorage` and sends it as a Bearer
+token, so logged-in B2B users automatically see B2B-only products and tiers.
+
+## Project layout
+
+```
+docker/            # backend Dockerfile, nginx config, entrypoint
+docker-compose.yml # app + nginx + postgres + frontend (one command)
+src/               # Laravel application
+  app/Contracts/PaymentGateway.php
+  app/Payments/    # gateway drivers + PaymentManager
+  app/Services/    # CurrencyService, OrderService
+  app/Models/      # Company, Product, ProductAnalog, Order, Payment, ...
+  routes/api.php   # all endpoints
+  database/        # migrations + DatabaseSeeder
+frontend/          # React + Vite + TypeScript + Tailwind storefront
+  src/api.ts       # typed API client
+  src/store.tsx    # auth + cart + settings context
+  src/pages/       # Catalog, ProductDetail, Login, Cart, Orders
+```
+
+## Performance (Octane)
+
+Requests are served by Laravel **Octane** running on **FrankenPHP**: the
+framework boots once and stays resident in worker memory, so each request skips
+the full bootstrap. OPcache + JIT are enabled in the image.
+
+> **Dev note:** because the app is held in memory, **PHP code changes don't take
+> effect until the workers reload.** After editing backend code run:
+>
+> ```bash
+> docker compose exec app php artisan octane:reload
+> ```
+>
+> (The React frontend still hot-reloads instantly via Vite.) Tune workers with
+> the `--workers` / `--max-requests` flags in `docker/php/Dockerfile`.
+
+## Useful commands
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed   # reset demo data
+docker compose exec app php artisan octane:reload          # reload after code edits
+docker compose exec app php artisan tinker                 # REPL
+docker compose down -v                                     # stop + wipe DB volume
+```

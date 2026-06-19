@@ -1,0 +1,10 @@
+**/.git
+**/node_modules
+src/node_modules
+src/.env
+src/storage/logs/*
+src/storage/framework/cache/data/*
+src/storage/framework/sessions/*
+src/storage/framework/views/*
+.idea
+.claude
