@@ -14,7 +14,7 @@ class CompanyController extends Controller
     {
         $companies = Company::query()
             ->withCount(['users', 'products', 'orders'])
-            ->when($request->query('search'), fn ($q, $s) => $q->where('name', 'ilike', "%{$s}%"))
+            ->search($request->query('search'))
             ->latest()
             ->paginate(20);
 

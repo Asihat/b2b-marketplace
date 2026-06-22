@@ -20,17 +20,12 @@ class ProductController extends Controller
             ->active()
             ->visibleTo($request->user())
             ->with(['translations', 'images'])
+            ->search($request->query('search'))
             ->when($request->query('category_id'), fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->query('brand'), fn ($q, $brand) => $q->where('brand', $brand))
             ->when($request->query('company_id'), fn ($q, $id) => $q->where('company_id', $id))
-            ->when($request->query('search'), function ($q, $term) {
-                $q->where(fn ($w) => $w
-                    ->where('name', 'ilike', "%{$term}%")
-                    ->orWhere('sku', 'ilike', "%{$term}%")
-                    ->orWhere('brand', 'ilike', "%{$term}%"));
-            })
-            ->when($request->query('in_stock'), fn ($q) => $q->where('stock', '>', 0))
-            ->orderBy($request->query('sort', 'name'), $request->query('direction', 'asc'))
+            ->when($request->boolean('in_stock'), fn ($q) => $q->where('stock', '>', 0))
+            ->sorted($request->query('sort'), $request->query('direction'))
             ->paginate(min(100, (int) $request->query('per_page', 20)));
 
         return ProductResource::collection($products);

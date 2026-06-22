@@ -68,6 +68,28 @@ class Product extends Model
         return $query->where('is_active', true);
     }
 
+    /** Full-text-ish search across the human-facing identifiers. No-op when blank. */
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if (blank($term)) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $w) => $w
+            ->where('name', 'ilike', "%{$term}%")
+            ->orWhere('sku', 'ilike', "%{$term}%")
+            ->orWhere('brand', 'ilike', "%{$term}%"));
+    }
+
+    /** Sort by a whitelisted column/direction (guards against SQL injection). */
+    public function scopeSorted(Builder $query, ?string $column, ?string $direction): Builder
+    {
+        $column = in_array($column, ['name', 'base_price', 'stock', 'created_at'], true) ? $column : 'name';
+        $direction = strtolower((string) $direction) === 'desc' ? 'desc' : 'asc';
+
+        return $query->orderBy($column, $direction);
+    }
+
     /** Hide B2B-only products from B2C (guest / b2c) buyers. */
     public function scopeVisibleTo(Builder $query, ?User $user): Builder
     {

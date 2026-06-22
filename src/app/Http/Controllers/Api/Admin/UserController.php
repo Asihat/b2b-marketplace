@@ -14,9 +14,7 @@ class UserController extends Controller
     {
         $users = User::query()
             ->with('company:id,name')
-            ->when($request->query('search'), fn ($q, $s) => $q->where(fn ($w) => $w
-                ->where('name', 'ilike', "%{$s}%")
-                ->orWhere('email', 'ilike', "%{$s}%")))
+            ->search($request->query('search'))
             ->when($request->query('type'), fn ($q, $t) => $q->where('type', $t))
             ->when($request->query('role'), fn ($q, $r) => $q->where('role', $r))
             ->latest()

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -29,5 +30,10 @@ class Company extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        return blank($term) ? $query : $query->where('name', 'ilike', "%{$term}%");
     }
 }

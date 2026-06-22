@@ -15,10 +15,7 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->with(['category:id,name', 'company:id,name', 'images'])
-            ->when($request->query('search'), fn ($q, $s) => $q->where(fn ($w) => $w
-                ->where('name', 'ilike', "%{$s}%")
-                ->orWhere('sku', 'ilike', "%{$s}%")
-                ->orWhere('brand', 'ilike', "%{$s}%")))
+            ->search($request->query('search'))
             ->when($request->query('category_id'), fn ($q, $id) => $q->where('category_id', $id))
             ->latest()
             ->paginate(20);

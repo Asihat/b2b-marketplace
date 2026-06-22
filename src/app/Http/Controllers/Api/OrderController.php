@@ -16,16 +16,12 @@ class OrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $orders = Order::with(['items', 'payment'])
+            ->visibleTo($request->user())
+            ->latest()
+            ->paginate(20);
 
-        $query = Order::with(['items', 'payment'])->latest();
-
-        // B2B buyers see their whole company's orders; everyone else, their own.
-        $user->isB2b() && $user->company_id
-            ? $query->where('company_id', $user->company_id)
-            : $query->where('user_id', $user->id);
-
-        return response()->json($query->paginate(20));
+        return response()->json($orders);
     }
 
     public function store(StoreOrderRequest $request): JsonResponse
@@ -41,17 +37,8 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): JsonResponse
     {
-        $this->authorizeOrder($request, $order);
+        $this->authorize('view', $order);
 
         return response()->json($order->load(['items', 'payments']));
-    }
-
-    private function authorizeOrder(Request $request, Order $order): void
-    {
-        $user = $request->user();
-        $ownsOrder = $order->user_id === $user->id
-            || ($user->isB2b() && $order->company_id && $order->company_id === $user->company_id);
-
-        abort_unless($ownsOrder || $user->isAdmin(), 403, 'Not your order.');
     }
 }

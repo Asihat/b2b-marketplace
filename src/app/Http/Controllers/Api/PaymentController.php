@@ -31,7 +31,7 @@ class PaymentController extends Controller
     /** Initiate payment for an order. */
     public function pay(Request $request, Order $order): JsonResponse
     {
-        $this->authorizeOrder($request, $order);
+        $this->authorize('pay', $order);
 
         if ($order->status->isSettled()) {
             return response()->json(['message' => 'Order is already paid.'], 422);
@@ -75,14 +75,5 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => $result->status]);
-    }
-
-    private function authorizeOrder(Request $request, Order $order): void
-    {
-        $user = $request->user();
-        $ownsOrder = $order->user_id === $user->id
-            || ($user->isB2b() && $order->company_id === $user->company_id);
-
-        abort_unless($ownsOrder, 403, 'Not your order.');
     }
 }

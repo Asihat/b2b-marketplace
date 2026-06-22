@@ -16,7 +16,7 @@ class OrderController extends Controller
             ->with(['user:id,name,email', 'company:id,name'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->query('type'), fn ($q, $t) => $q->where('type', $t))
-            ->when($request->query('search'), fn ($q, $s) => $q->where('number', 'ilike', "%{$s}%"))
+            ->numberLike($request->query('search'))
             ->latest()
             ->paginate(20);
 

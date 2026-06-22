@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountType;
 use App\Enums\OrderStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -49,5 +50,21 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Restrict to orders the given user may see: B2B buyers see their whole
+     * company's orders, everyone else only their own.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $user->isB2b() && $user->company_id
+            ? $query->where('company_id', $user->company_id)
+            : $query->where('user_id', $user->id);
+    }
+
+    public function scopeNumberLike(Builder $query, ?string $term): Builder
+    {
+        return blank($term) ? $query : $query->where('number', 'ilike', "%{$term}%");
     }
 }
