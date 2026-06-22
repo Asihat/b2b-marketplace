@@ -166,6 +166,14 @@ export interface AdminCompany {
   orders_count?: number;
 }
 
+export interface ProductPriceRow {
+  id: number;
+  product_id: number;
+  currency_code: string;
+  min_qty: number;
+  price: string;
+}
+
 export interface Dashboard {
   stats: {
     users: number;
@@ -281,6 +289,16 @@ export const adminApi = {
       body: JSON.stringify(payload),
     }),
   deleteProduct: (id: number) => request<{ message: string }>(`/admin/products/${id}`, { method: "DELETE" }),
+
+  productPrices: (productId: number) =>
+    request<ProductPriceRow[]>(`/admin/products/${productId}/prices`),
+  saveProductPrice: (productId: number, id: number | null, payload: Record<string, unknown>) =>
+    request<ProductPriceRow>(`/admin/products/${productId}/prices${id ? `/${id}` : ""}`, {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteProductPrice: (productId: number, id: number) =>
+    request<{ message: string }>(`/admin/products/${productId}/prices/${id}`, { method: "DELETE" }),
 
   categories: () => request<AdminCategory[]>(`/admin/categories`),
   saveCategory: (id: number | null, payload: Record<string, unknown>) =>

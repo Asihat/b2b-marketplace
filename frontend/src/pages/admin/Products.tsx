@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi, type AdminProduct, type AdminCategory } from "../../api";
 import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { ProductPricesModal } from "./ProductPricesModal";
 
 type Draft = Partial<AdminProduct>;
 
@@ -16,6 +17,7 @@ export function Products() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Draft | null>(null);
   const [imagesText, setImagesText] = useState("");
+  const [pricing, setPricing] = useState<AdminProduct | null>(null);
   const [error, setError] = useState("");
   const debouncedSearch = useDebouncedValue(search);
 
@@ -106,6 +108,7 @@ export function Products() {
                   {!p.is_active && <span className="bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">hidden</span>}
                 </td>
                 <td className="px-4 py-2 text-right space-x-1 whitespace-nowrap">
+                  <Btn variant="ghost" onClick={() => setPricing(p)}>Prices</Btn>
                   <Btn variant="ghost" onClick={() => openEditor({ ...p })}>Edit</Btn>
                   <Btn variant="danger" onClick={() => remove(p)}>Delete</Btn>
                 </td>
@@ -180,6 +183,8 @@ export function Products() {
           </div>
         </Modal>
       )}
+
+      {pricing && <ProductPricesModal product={pricing} onClose={() => setPricing(null)} />}
     </div>
   );
 }

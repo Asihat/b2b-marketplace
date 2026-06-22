@@ -67,6 +67,12 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(
     Route::put('/products/{product}', [Admin\ProductController::class, 'update']);
     Route::delete('/products/{product}', [Admin\ProductController::class, 'destroy']);
 
+    // Per-product price overrides & B2B volume tiers.
+    Route::get('/products/{product}/prices', [Admin\ProductPriceController::class, 'index']);
+    Route::post('/products/{product}/prices', [Admin\ProductPriceController::class, 'store']);
+    Route::put('/products/{product}/prices/{price}', [Admin\ProductPriceController::class, 'update']);
+    Route::delete('/products/{product}/prices/{price}', [Admin\ProductPriceController::class, 'destroy']);
+
     Route::get('/categories', [Admin\CategoryController::class, 'index']);
     Route::post('/categories', [Admin\CategoryController::class, 'store']);
     Route::put('/categories/{category}', [Admin\CategoryController::class, 'update']);
