@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminApi, type AdminProduct, type AdminCategory } from "../../api";
 import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Draft = Partial<AdminProduct>;
 
@@ -16,9 +17,10 @@ export function Products() {
   const [editing, setEditing] = useState<Draft | null>(null);
   const [imagesText, setImagesText] = useState("");
   const [error, setError] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   function load() {
-    adminApi.products({ search }).then((r) => setProducts(r.data)).catch(() => {});
+    adminApi.products({ search: debouncedSearch }).then((r) => setProducts(r.data)).catch(() => {});
   }
 
   function openEditor(draft: Draft) {
@@ -28,7 +30,7 @@ export function Products() {
   }
 
   useEffect(() => { adminApi.categories().then(setCategories).catch(() => {}); }, []);
-  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [search]);
+  useEffect(() => { load(); }, [debouncedSearch]);
 
   async function save() {
     if (!editing) return;

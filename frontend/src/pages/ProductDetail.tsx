@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Analog, type Product } from "../api";
 import { useStore } from "../store";
+import { useT } from "../i18n";
 
 export function ProductDetail() {
   const { slug } = useParams();
   const { currency, locale, addToCart } = useStore();
+  const t = useT();
   const [product, setProduct] = useState<Product | null>(null);
   const [analogs, setAnalogs] = useState<Analog[]>([]);
   const [qty, setQty] = useState(1);
@@ -60,7 +62,7 @@ export function ProductDetail() {
   return (
     <div>
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand-600 transition mb-5">
-        <span aria-hidden>←</span> Back to catalog
+        <span aria-hidden>←</span> {t("product.backToCatalog")}
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8">
@@ -97,7 +99,7 @@ export function ProductDetail() {
           <div>
             <div className="flex items-center gap-2 text-xs">
               <span className="font-medium uppercase tracking-wide text-slate-400">{product.brand}</span>
-              {product.is_b2b_only && <span className="badge bg-amber-100 text-amber-700">Business only</span>}
+              {product.is_b2b_only && <span className="badge bg-amber-100 text-amber-700">{t("product.businessOnly")}</span>}
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900">{product.name}</h1>
             <div className="mt-1 text-sm text-slate-400 font-mono">{product.sku}</div>
@@ -107,14 +109,14 @@ export function ProductDetail() {
           <div className="card p-5">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900">{product.price.formatted}</span>
-              <span className="text-xs text-slate-400">/ {product.unit} · {currency}</span>
+              <span className="text-xs text-slate-400">{t("product.perUnit", { unit: product.unit })} · {currency}</span>
             </div>
             <div className="mt-2 flex items-center gap-2 text-sm">
               <span className={`inline-flex items-center gap-1.5 ${product.stock > 0 ? "text-emerald-600" : "text-rose-500"}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${product.stock > 0 ? "bg-emerald-500" : "bg-rose-500"}`} />
-                {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                {product.stock > 0 ? t("product.inStock", { count: product.stock }) : t("product.outOfStock")}
               </span>
-              {product.min_order_qty > 1 && <span className="text-slate-400">· min order {product.min_order_qty}</span>}
+              {product.min_order_qty > 1 && <span className="text-slate-400">· {t("product.minOrder", { count: product.min_order_qty })}</span>}
             </div>
 
             <div className="flex items-center gap-3 mt-5">
@@ -137,11 +139,11 @@ export function ProductDetail() {
                 onClick={handleAdd}
                 className={`btn flex-1 text-white transition ${added ? "bg-emerald-600" : "btn-primary"}`}
               >
-                {added ? "✓ Added to cart" : "Add to cart"}
+                {added ? t("product.added") : t("product.addToCart")}
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-3">
-              Price updates automatically for B2B volume tiers as quantity changes.
+              {t("product.priceNote")}
             </p>
           </div>
         </div>
@@ -149,9 +151,9 @@ export function ProductDetail() {
 
       {/* Analogs */}
       <section className="mt-12">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Analogs & cross-references</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t("product.analogs")}</h2>
         {analogs.length === 0 ? (
-          <p className="text-slate-400 text-sm">No analogs listed for this product.</p>
+          <p className="text-slate-400 text-sm">{t("product.noAnalogs")}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {analogs.map((a) => (

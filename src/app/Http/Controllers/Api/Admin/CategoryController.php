@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -18,17 +17,17 @@ class CategoryController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(CategoryRequest $request): JsonResponse
     {
-        $data = $this->validateData($request);
-        $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+        $data = $request->validated();
+        $data['slug'] ??= Str::slug($data['name']);
 
         return response()->json(Category::create($data), 201);
     }
 
-    public function update(Request $request, Category $category): JsonResponse
+    public function update(CategoryRequest $request, Category $category): JsonResponse
     {
-        $category->update($this->validateData($request, $category->id));
+        $category->update($request->validated());
 
         return response()->json($category->fresh());
     }
@@ -38,17 +37,5 @@ class CategoryController extends Controller
         $category->delete();
 
         return response()->json(['message' => 'Category deleted.']);
-    }
-
-    protected function validateData(Request $request, ?int $id = null): array
-    {
-        return $request->validate([
-            'name' => [$id ? 'sometimes' : 'required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', Rule::unique('categories', 'slug')->ignore($id)],
-            'parent_id' => ['nullable', 'exists:categories,id'],
-            'name_translations' => ['nullable', 'array'],
-            'position' => ['nullable', 'integer'],
-            'is_active' => ['boolean'],
-        ]);
     }
 }

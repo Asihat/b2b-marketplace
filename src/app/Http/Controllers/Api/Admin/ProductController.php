@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ProductRequest;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -26,33 +26,40 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(ProductRequest $request): JsonResponse
     {
-        $data = $this->validateData($request);
-        $images = $data['images'] ?? null;
-        unset($data['images']);
-        $data['slug'] = $data['slug'] ?? Str::slug($data['sku']);
-
-        $product = Product::create($data);
-        $this->syncImages($product, $images);
+        $product = Product::create($this->attributes($request));
+        $this->syncImages($product, $request->validated('images'));
 
         return response()->json($product->load(['category:id,name', 'images']), 201);
     }
 
-    public function update(Request $request, Product $product): JsonResponse
+    public function update(ProductRequest $request, Product $product): JsonResponse
     {
-        $data = $this->validateData($request, $product->id);
-        $images = $data['images'] ?? null;
-        unset($data['images']);
-
-        $product->update($data);
-        $this->syncImages($product, $images);
+        $product->update($this->attributes($request));
+        $this->syncImages($product, $request->validated('images'));
 
         return response()->json($product->fresh()->load(['category:id,name', 'images']));
     }
 
+    public function destroy(Product $product): JsonResponse
+    {
+        $product->delete();
+
+        return response()->json(['message' => 'Product deleted.']);
+    }
+
+    /** Persistable product columns (everything except the images list). */
+    private function attributes(ProductRequest $request): array
+    {
+        $data = collect($request->validated())->except('images')->all();
+        $data['slug'] ??= isset($data['sku']) ? Str::slug($data['sku']) : null;
+
+        return array_filter($data, fn ($v) => $v !== null);
+    }
+
     /** Replace a product's images from a list of URLs (first = primary). */
-    protected function syncImages(Product $product, ?array $urls): void
+    private function syncImages(Product $product, ?array $urls): void
     {
         if ($urls === null) {
             return;
@@ -67,35 +74,5 @@ class ProductController extends Controller
                 'is_primary' => $i === 0,
             ]);
         }
-    }
-
-    public function destroy(Product $product): JsonResponse
-    {
-        $product->delete();
-
-        return response()->json(['message' => 'Product deleted.']);
-    }
-
-    protected function validateData(Request $request, ?int $id = null): array
-    {
-        $creating = $id === null;
-
-        return $request->validate([
-            'sku' => [$creating ? 'required' : 'sometimes', 'string', Rule::unique('products', 'sku')->ignore($id)],
-            'slug' => ['nullable', 'string', Rule::unique('products', 'slug')->ignore($id)],
-            'name' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'brand' => ['nullable', 'string', 'max:255'],
-            'unit' => ['nullable', 'string', 'max:50'],
-            'category_id' => ['nullable', 'exists:categories,id'],
-            'company_id' => ['nullable', 'exists:companies,id'],
-            'base_price' => [$creating ? 'required' : 'sometimes', 'numeric', 'min:0'],
-            'stock' => ['nullable', 'integer', 'min:0'],
-            'min_order_qty' => ['nullable', 'integer', 'min:1'],
-            'is_b2b_only' => ['boolean'],
-            'is_active' => ['boolean'],
-            'images' => ['nullable', 'array'],
-            'images.*' => ['string', 'max:2048'],
-        ]);
     }
 }

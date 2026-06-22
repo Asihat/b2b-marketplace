@@ -90,6 +90,14 @@ export interface Order {
   subtotal: string;
   tax_total: string;
   grand_total: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  shipping_address: string | null;
+  shipping_city: string | null;
+  shipping_postal_code: string | null;
+  shipping_country: string | null;
+  notes: string | null;
   items?: OrderItem[];
   payment?: Payment | null;
 }

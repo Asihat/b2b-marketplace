@@ -275,7 +275,10 @@ class DatabaseSeeder extends Seeder
         return $product;
     }
 
-    /** Attach deterministic placeholder images (Picsum) keyed by the product slug. */
+    /**
+     * Attach deterministic placeholder images served by the app itself
+     * (see ImageController) — no external image host required.
+     */
     protected function attachImages(Product $product, int $count = 3): void
     {
         if ($product->images()->exists()) {
@@ -284,7 +287,7 @@ class DatabaseSeeder extends Seeder
 
         for ($i = 1; $i <= $count; $i++) {
             $product->images()->create([
-                'url' => "https://picsum.photos/seed/{$product->slug}-{$i}/800/800",
+                'url' => url("/img/{$product->slug}-{$i}"),
                 'alt' => $product->name,
                 'position' => $i,
                 'is_primary' => $i === 1,

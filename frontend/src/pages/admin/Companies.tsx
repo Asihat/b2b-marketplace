@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { adminApi, type AdminCompany } from "../../api";
 import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 export function Companies() {
   const [items, setItems] = useState<AdminCompany[]>([]);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<AdminCompany | null>(null);
   const [error, setError] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
-  function load() { adminApi.companies({ search }).then((r) => setItems(r.data)).catch(() => {}); }
-  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [search]);
+  function load() { adminApi.companies({ search: debouncedSearch }).then((r) => setItems(r.data)).catch(() => {}); }
+  useEffect(() => { load(); }, [debouncedSearch]);
 
   async function toggleVerify(c: AdminCompany) {
     await adminApi.updateCompany(c.id, { is_verified: !c.is_verified });

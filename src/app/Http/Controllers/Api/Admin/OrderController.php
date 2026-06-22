@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    public const STATUSES = ['pending', 'paid', 'processing', 'shipped', 'completed', 'cancelled'];
-
     public function index(Request $request): JsonResponse
     {
         $orders = Order::query()
@@ -29,13 +28,9 @@ class OrderController extends Controller
         return response()->json($order->load(['items', 'payments', 'user:id,name,email', 'company:id,name']));
     }
 
-    public function updateStatus(Request $request, Order $order): JsonResponse
+    public function updateStatus(UpdateOrderStatusRequest $request, Order $order): JsonResponse
     {
-        $data = $request->validate([
-            'status' => ['required', 'in:'.implode(',', self::STATUSES)],
-        ]);
-
-        $order->update($data);
+        $order->update($request->validated());
 
         return response()->json($order->fresh()->load('items'));
     }

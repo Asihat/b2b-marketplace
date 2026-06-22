@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CompanyRequest;
 use App\Models\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,21 +21,9 @@ class CompanyController extends Controller
         return response()->json($companies);
     }
 
-    public function update(Request $request, Company $company): JsonResponse
+    public function update(CompanyRequest $request, Company $company): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'tax_number' => ['nullable', 'string', 'max:100'],
-            'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'country' => ['nullable', 'string', 'size:2'],
-            'address' => ['nullable', 'string'],
-            'default_currency' => ['nullable', 'string', 'size:3'],
-            'default_locale' => ['nullable', 'string', 'max:5'],
-            'is_verified' => ['boolean'],
-        ]);
-
-        $company->update($data);
+        $company->update($request->validated());
 
         return response()->json($company->fresh());
     }

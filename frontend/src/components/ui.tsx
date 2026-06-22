@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { STATUS_COLORS } from "../lib/constants";
 
 export function PageHeader({ title, action }: { title: string; action?: ReactNode }) {
   return (
@@ -79,14 +80,6 @@ export function Btn({
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: "bg-slate-100 text-slate-600",
-    paid: "bg-emerald-100 text-emerald-700",
-    processing: "bg-blue-100 text-blue-700",
-    shipped: "bg-brand-100 text-brand-700",
-    completed: "bg-emerald-100 text-emerald-700",
-    cancelled: "bg-rose-100 text-rose-700",
-  };
-  return <span className={`badge ${colors[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
+  return <span className={`badge ${STATUS_COLORS[status] ?? "bg-slate-100 text-slate-600"}`}>{label ?? status}</span>;
 }

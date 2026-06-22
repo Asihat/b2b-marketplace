@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UserRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -25,42 +25,18 @@ class UserController extends Controller
         return response()->json($users);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(UserRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
-            'type' => ['required', 'in:b2c,b2b'],
-            'role' => ['required', 'in:customer,manager,admin'],
-            'company_id' => ['nullable', 'exists:companies,id'],
-            'currency' => ['nullable', 'string', 'size:3'],
-            'locale' => ['nullable', 'string', 'max:5'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $user = User::create($data);
+        $user = User::create($request->validated());
 
         return response()->json($user->load('company:id,name'), 201);
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UserRequest $request, User $user): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8'],
-            'type' => ['sometimes', 'in:b2c,b2b'],
-            'role' => ['sometimes', 'in:customer,manager,admin'],
-            'company_id' => ['nullable', 'exists:companies,id'],
-            'currency' => ['nullable', 'string', 'size:3'],
-            'locale' => ['nullable', 'string', 'max:5'],
-            'is_active' => ['boolean'],
-        ]);
-
-        if (empty($data['password'])) {
-            unset($data['password']);
-        }
+        $data = collect($request->validated())
+            ->reject(fn ($value, $key) => $key === 'password' && blank($value))
+            ->all();
 
         $user->update($data);
 

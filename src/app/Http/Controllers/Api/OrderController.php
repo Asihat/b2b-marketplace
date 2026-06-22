@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
@@ -11,37 +12,26 @@ use RuntimeException;
 
 class OrderController extends Controller
 {
-    public function __construct(protected OrderService $orders) {}
+    public function __construct(private readonly OrderService $orders) {}
 
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $query = Order::with(['items', 'payment'])->latest();
 
-        // B2B managers see the whole company's orders; everyone else sees their own.
-        $user = $request->user();
-        if ($user->isB2b() && $user->company_id) {
-            $query->where('company_id', $user->company_id);
-        } else {
-            $query->where('user_id', $user->id);
-        }
+        // B2B buyers see their whole company's orders; everyone else, their own.
+        $user->isB2b() && $user->company_id
+            ? $query->where('company_id', $user->company_id)
+            : $query->where('user_id', $user->id);
 
         return response()->json($query->paginate(20));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreOrderRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'currency_code' => ['nullable', 'string', 'size:3'],
-            'shipping_address' => ['nullable', 'string'],
-            'notes' => ['nullable', 'string'],
-            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:1'],
-        ]);
-
         try {
-            $order = $this->orders->place($request->user(), $data['items'], $data);
+            $order = $this->orders->place($request->user(), $request->validated()['items'], $request->validated());
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -56,12 +46,12 @@ class OrderController extends Controller
         return response()->json($order->load(['items', 'payments']));
     }
 
-    protected function authorizeOrder(Request $request, Order $order): void
+    private function authorizeOrder(Request $request, Order $order): void
     {
         $user = $request->user();
-        $owns = $order->user_id === $user->id
+        $ownsOrder = $order->user_id === $user->id
             || ($user->isB2b() && $order->company_id && $order->company_id === $user->company_id);
 
-        abort_unless($owns || $user->isAdmin(), 403, 'Not your order.');
+        abort_unless($ownsOrder || $user->isAdmin(), 403, 'Not your order.');
     }
 }

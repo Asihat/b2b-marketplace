@@ -52,6 +52,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLocaleState(l);
   };
 
+  // Reflect the active UI locale on <html lang="…">.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   // Restore session on load.
   useEffect(() => {
     if (localStorage.getItem("token")) {

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Payments\PaymentManager;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
@@ -12,8 +15,8 @@ use Illuminate\Http\Request;
 class PaymentController extends Controller
 {
     public function __construct(
-        protected OrderService $orders,
-        protected PaymentManager $gateways,
+        private readonly OrderService $orders,
+        private readonly PaymentManager $gateways,
     ) {}
 
     /** List available payment gateways. */
@@ -28,14 +31,9 @@ class PaymentController extends Controller
     /** Initiate payment for an order. */
     public function pay(Request $request, Order $order): JsonResponse
     {
-        abort_unless(
-            $order->user_id === $request->user()->id
-                || ($request->user()->isB2b() && $order->company_id === $request->user()->company_id),
-            403,
-            'Not your order.'
-        );
+        $this->authorizeOrder($request, $order);
 
-        if (in_array($order->status, ['paid', 'completed'], true)) {
+        if ($order->status->isSettled()) {
             return response()->json(['message' => 'Order is already paid.'], 422);
         }
 
@@ -58,21 +56,33 @@ class PaymentController extends Controller
     public function callback(Request $request, string $gateway): JsonResponse
     {
         $result = $this->gateways->driver($gateway)->callback($request->all());
+        $completed = $result->status === PaymentStatus::Completed->value;
 
-        if ($result->reference) {
-            $payment = \App\Models\Payment::where('reference', $result->reference)->first();
-            if ($payment) {
-                $payment->update([
-                    'status' => $result->status,
-                    'paid_at' => $result->status === 'completed' ? now() : $payment->paid_at,
-                    'payload' => $result->payload,
-                ]);
-                if ($result->status === 'completed') {
-                    $payment->order->update(['status' => 'paid']);
-                }
+        $payment = $result->reference
+            ? Payment::where('reference', $result->reference)->first()
+            : null;
+
+        if ($payment) {
+            $payment->update([
+                'status' => $result->status,
+                'paid_at' => $completed ? now() : $payment->paid_at,
+                'payload' => $result->payload,
+            ]);
+
+            if ($completed) {
+                $payment->order->update(['status' => OrderStatus::Paid]);
             }
         }
 
         return response()->json(['status' => $result->status]);
+    }
+
+    private function authorizeOrder(Request $request, Order $order): void
+    {
+        $user = $request->user();
+        $ownsOrder = $order->user_id === $user->id
+            || ($user->isB2b() && $order->company_id === $user->company_id);
+
+        abort_unless($ownsOrder, 403, 'Not your order.');
     }
 }

@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api, type Currency, type Language } from "../api";
 import { useStore } from "../store";
+import { useT } from "../i18n";
 
 export function Layout() {
   const { currency, setCurrency, locale, setLocale, user, logout, cartCount } = useStore();
+  const t = useT();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const navigate = useNavigate();
@@ -32,30 +34,30 @@ export function Layout() {
           </Link>
 
           <nav className="hidden sm:flex items-center gap-5">
-            <NavLink to="/" end className={navLink}>Catalog</NavLink>
-            {user && <NavLink to="/orders" className={navLink}>Orders</NavLink>}
+            <NavLink to="/" end className={navLink}>{t("nav.catalog")}</NavLink>
+            {user && <NavLink to="/orders" className={navLink}>{t("nav.orders")}</NavLink>}
             {user?.role === "admin" && (
               <NavLink to="/admin" className={({ isActive }) =>
                 `text-sm font-medium transition-colors ${isActive ? "text-brand-700" : "text-brand-600 hover:text-brand-700"}`
               }>
-                Admin
+                {t("nav.admin")}
               </NavLink>
             )}
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
-            <select value={locale} onChange={(e) => setLocale(e.target.value)} className={`${selectClass} hidden sm:block`} title="Language">
+            <select value={locale} onChange={(e) => setLocale(e.target.value)} className={`${selectClass} hidden sm:block`} title={t("nav.language")}>
               {languages.map((l) => <option key={l.code} value={l.code}>{l.native_name}</option>)}
             </select>
 
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={selectClass} title="Currency">
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={selectClass} title={t("nav.currency")}>
               {currencies.map((c) => <option key={c.code} value={c.code}>{c.code} {c.symbol}</option>)}
             </select>
 
             <Link
               to="/cart"
               className="relative grid place-items-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-900/5 transition"
-              title="Cart"
+              title={t("nav.cart")}
             >
               <span className="text-[17px]">🛍️</span>
               {cartCount > 0 && (
@@ -77,11 +79,11 @@ export function Layout() {
                   </div>
                 </div>
                 <button onClick={() => { logout(); navigate("/"); }} className="text-sm text-slate-400 hover:text-rose-600 transition px-2">
-                  Logout
+                  {t("nav.logout")}
                 </button>
               </div>
             ) : (
-              <Link to="/login" className="btn-primary !px-4 !py-2 ml-1">Sign in</Link>
+              <Link to="/login" className="btn-primary !px-4 !py-2 ml-1">{t("nav.signIn")}</Link>
             )}
           </div>
         </div>
@@ -93,7 +95,7 @@ export function Layout() {
 
       <footer className="border-t border-slate-900/[0.06] mt-8">
         <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-          <span>© {new Date().getFullYear()} Marketplace — open-source B2B / B2C platform</span>
+          <span>© {new Date().getFullYear()} Marketplace — {t("footer.tagline")}</span>
           <span>Laravel · Octane · React · Tailwind</span>
         </div>
       </footer>

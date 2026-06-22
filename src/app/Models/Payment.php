@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +17,7 @@ class Payment extends Model
         'amount' => 'decimal:4',
         'payload' => 'array',
         'paid_at' => 'datetime',
+        'status' => PaymentStatus::class,
     ];
 
     public function order(): BelongsTo

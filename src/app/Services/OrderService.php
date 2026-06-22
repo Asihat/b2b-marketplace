@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\AccountType;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
@@ -37,10 +40,16 @@ class OrderService
                 'number' => 'ORD-'.strtoupper(Str::random(8)),
                 'user_id' => $user->id,
                 'company_id' => $user->company_id,
-                'type' => $user->isB2b() ? 'b2b' : 'b2c',
-                'status' => 'pending',
+                'type' => $user->isB2b() ? AccountType::B2b : AccountType::B2c,
+                'status' => OrderStatus::Pending,
                 'currency_code' => $currency,
+                'contact_name' => $attributes['contact_name'] ?? $user->name,
+                'contact_email' => $attributes['contact_email'] ?? $user->email,
+                'contact_phone' => $attributes['contact_phone'] ?? $user->phone,
                 'shipping_address' => $attributes['shipping_address'] ?? null,
+                'shipping_city' => $attributes['shipping_city'] ?? null,
+                'shipping_postal_code' => $attributes['shipping_postal_code'] ?? null,
+                'shipping_country' => $attributes['shipping_country'] ?? null,
                 'notes' => $attributes['notes'] ?? null,
             ]);
 
@@ -96,6 +105,8 @@ class OrderService
         $driver = $this->payments->driver($gateway);
         $result = $driver->charge($order);
 
+        $completed = $result->status === PaymentStatus::Completed->value;
+
         $payment = $order->payments()->create([
             'gateway' => $driver->name(),
             'status' => $result->status,
@@ -103,11 +114,11 @@ class OrderService
             'amount' => $order->grand_total,
             'reference' => $result->reference,
             'payload' => $result->payload,
-            'paid_at' => $result->status === 'completed' ? now() : null,
+            'paid_at' => $completed ? now() : null,
         ]);
 
-        if ($result->status === 'completed') {
-            $order->update(['status' => 'paid']);
+        if ($completed) {
+            $order->update(['status' => OrderStatus::Paid]);
         }
 
         return $payment;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi, type AdminUser } from "../../api";
 import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
 import { useStore } from "../../store";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Draft = Partial<AdminUser> & { password?: string };
 
@@ -13,11 +14,12 @@ export function Users() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Draft | null>(null);
   const [error, setError] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   function load() {
-    adminApi.users({ search }).then((r) => setUsers(r.data)).catch(() => {});
+    adminApi.users({ search: debouncedSearch }).then((r) => setUsers(r.data)).catch(() => {});
   }
-  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [search]);
+  useEffect(() => { load(); }, [debouncedSearch]);
 
   async function save() {
     if (!editing) return;
