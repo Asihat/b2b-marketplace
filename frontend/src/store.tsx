@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, setToken, type Product, type User } from "./api";
+import { api, setToken, type AppSettings, type Product, type User } from "./api";
 
 // ---- Cart ----
 
@@ -20,6 +20,9 @@ interface StoreState {
   // settings
   currency: string;
   locale: string;
+  settings: AppSettings;
+  isB2bMode: boolean;
+  refreshSettings: () => Promise<AppSettings>;
   setCurrency: (c: string) => void;
   setLocale: (l: string) => void;
   // auth
@@ -36,10 +39,12 @@ interface StoreState {
 }
 
 const StoreContext = createContext<StoreState | null>(null);
+const DEFAULT_SETTINGS: AppSettings = { mode: "b2c", show_company_names: false };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState(localStorage.getItem("currency") ?? "USD");
   const [locale, setLocaleState] = useState(localStorage.getItem("locale") ?? "en");
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
 
@@ -51,11 +56,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("locale", l);
     setLocaleState(l);
   };
+  const refreshSettings = useCallback(async () => {
+    const next = await api.settings();
+    setSettings(next);
+    return next;
+  }, []);
 
   // Reflect the active UI locale on <html lang="…">.
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  // Load public website configuration.
+  useEffect(() => {
+    refreshSettings().catch(() => setSettings(DEFAULT_SETTINGS));
+  }, [refreshSettings]);
 
   // Restore session on load.
   useEffect(() => {
@@ -104,6 +119,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       currency,
       locale,
+      settings,
+      isB2bMode: settings.mode === "b2b",
+      refreshSettings,
       setCurrency,
       setLocale,
       user,
@@ -116,7 +134,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clearCart,
       cartCount: cart.reduce((n, l) => n + l.quantity, 0),
     }),
-    [currency, locale, user, cart, login, register, logout, addToCart, removeFromCart, clearCart],
+    [currency, locale, settings, refreshSettings, user, cart, login, register, logout, addToCart, removeFromCart, clearCart],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

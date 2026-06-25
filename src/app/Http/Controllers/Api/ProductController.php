@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AnalogResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\MarketplaceSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -20,11 +21,15 @@ class ProductController extends Controller
         $qty = max(1, (int) $request->query('qty', 1));
         $priceSql = Product::effectivePriceSql();
         $priceBindings = Product::effectivePriceBindings($currency, $qty);
+        $showCompanyNames = app(MarketplaceSettings::class)->showCompanyNames();
+        $relations = $showCompanyNames
+            ? ['translations', 'images', 'company:id,name,slug,is_verified']
+            : ['translations', 'images'];
 
         $products = Product::query()
             ->active()
             ->visibleTo($request->user())
-            ->with(['translations', 'images'])
+            ->with($relations)
             ->search($request->query('search'))
             ->when($request->query('category_id'), fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->query('brand'), fn ($q, $brand) => $q->where('brand', $brand))
@@ -43,7 +48,9 @@ class ProductController extends Controller
         $product = Product::query()
             ->active()
             ->visibleTo($request->user())
-            ->with(['translations', 'prices', 'images', 'analogs.images'])
+            ->with(app(MarketplaceSettings::class)->showCompanyNames()
+                ? ['translations', 'prices', 'images', 'company:id,name,slug,is_verified', 'analogs.images']
+                : ['translations', 'prices', 'images', 'analogs.images'])
             ->where(function ($q) use ($idOrSlug) {
                 $q->where('slug', $idOrSlug);
                 if (ctype_digit((string) $idOrSlug)) {

@@ -4,8 +4,9 @@ import { useStore } from "../store";
 import { useT } from "../i18n";
 
 export function ProductCard({ product }: { product: Product }) {
-  const { addToCart } = useStore();
+  const { addToCart, settings } = useStore();
   const t = useT();
+  const showSeller = settings.show_company_names && product.company;
 
   return (
     <div className="card card-hover group flex flex-col overflow-hidden">
@@ -36,6 +37,13 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
           {product.brand ?? "—"}
         </div>
+        {showSeller && (
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="text-slate-400">{t("product.seller")}</span>
+            <span className="font-medium text-slate-700 truncate">{product.company?.name}</span>
+            {product.company?.is_verified && <span className="text-emerald-600">{t("product.verified")}</span>}
+          </div>
+        )}
         <Link
           to={`/products/${product.slug}`}
           className="mt-0.5 font-medium text-slate-800 leading-snug line-clamp-2 hover:text-brand-600 transition-colors"

@@ -17,6 +17,7 @@ import { Categories as AdminCategories } from "./pages/admin/Categories";
 import { Users as AdminUsers } from "./pages/admin/Users";
 import { Companies as AdminCompanies } from "./pages/admin/Companies";
 import { Currencies as AdminCurrencies } from "./pages/admin/Currencies";
+import { Settings as AdminSettings } from "./pages/admin/Settings";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
       { path: "users", element: <AdminUsers /> },
       { path: "companies", element: <AdminCompanies /> },
       { path: "currencies", element: <AdminCurrencies /> },
+      { path: "settings", element: <AdminSettings /> },
     ],
   },
 ]);

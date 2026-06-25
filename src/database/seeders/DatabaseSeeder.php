@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $company = $this->seedCompanyAndUsers();
         $this->seedAnchorProducts($categories, $company);
         $this->seedCatalog($categories, $company);
+        $this->seedSecondSupplierProducts($company);
     }
 
     protected function seedCurrencies(): void
@@ -102,6 +103,80 @@ class DatabaseSeeder extends Seeder
         );
 
         return $company;
+    }
+
+    protected function seedSecondSupplierProducts(Company $sourceCompany): Company
+    {
+        $supplier = Company::updateOrCreate(
+            ['slug' => 'northwind-supply'],
+            [
+                'name' => 'Northwind Supply Co.',
+                'tax_number' => 'NW-3000-4000',
+                'email' => 'sales@northwind.test',
+                'phone' => '+7 700 300 4000',
+                'country' => 'KZ',
+                'default_currency' => 'USD',
+                'default_locale' => 'en',
+                'is_verified' => true,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'supplier@northwind.test'],
+            ['name' => 'Northwind Seller', 'password' => 'password', 'type' => 'b2b', 'role' => 'customer', 'company_id' => $supplier->id, 'currency' => 'USD'],
+        );
+
+        Product::query()
+            ->where('company_id', $sourceCompany->id)
+            ->with(['translations', 'prices'])
+            ->orderBy('id')
+            ->get()
+            ->each(function (Product $source) use ($supplier): void {
+                $price = round((float) $source->base_price * 0.97, 4);
+                $stock = max(1, (int) floor($source->stock * 0.6));
+                $sku = 'NW-'.$source->sku;
+
+                $product = Product::updateOrCreate(
+                    ['sku' => $sku],
+                    [
+                        'category_id' => $source->category_id,
+                        'company_id' => $supplier->id,
+                        'slug' => Str::slug($source->name.' '.$sku),
+                        'name' => $source->name,
+                        'description' => $source->name.' — supplied by '.$supplier->name.'. Alternative supplier offer for B2B comparison.',
+                        'brand' => $source->brand,
+                        'unit' => $source->unit,
+                        'base_price' => $price,
+                        'stock' => $stock,
+                        'min_order_qty' => $source->min_order_qty,
+                        'is_b2b_only' => $source->is_b2b_only,
+                        'is_active' => true,
+                    ]
+                );
+
+                foreach ($source->translations as $translation) {
+                    $product->translations()->updateOrCreate(
+                        ['locale' => $translation->locale],
+                        [
+                            'name' => $translation->name,
+                            'description' => $translation->description,
+                        ],
+                    );
+                }
+
+                foreach ($source->prices as $tier) {
+                    $product->prices()->updateOrCreate(
+                        ['currency_code' => $tier->currency_code, 'min_qty' => $tier->min_qty],
+                        ['price' => round((float) $tier->price * 0.97, 4)],
+                    );
+                }
+
+                $this->attachImages($product);
+                $source->analogs()->syncWithoutDetaching([$product->id => ['type' => 'substitute', 'note' => 'Same item from another supplier']]);
+                $product->analogs()->syncWithoutDetaching([$source->id => ['type' => 'substitute', 'note' => 'Same item from another supplier']]);
+            });
+
+        return $supplier;
     }
 
     /**

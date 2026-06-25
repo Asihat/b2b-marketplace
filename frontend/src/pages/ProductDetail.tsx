@@ -6,7 +6,7 @@ import { useT } from "../i18n";
 
 export function ProductDetail() {
   const { slug } = useParams();
-  const { currency, locale, addToCart } = useStore();
+  const { currency, locale, addToCart, settings } = useStore();
   const t = useT();
   const [product, setProduct] = useState<Product | null>(null);
   const [analogs, setAnalogs] = useState<Analog[]>([]);
@@ -58,6 +58,7 @@ export function ProductDetail() {
   }
 
   const images = product.images ?? [];
+  const showSeller = settings.show_company_names && product.company;
 
   return (
     <div>
@@ -103,6 +104,13 @@ export function ProductDetail() {
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900">{product.name}</h1>
             <div className="mt-1 text-sm text-slate-400 font-mono">{product.sku}</div>
+            {showSeller && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200">
+                <span className="text-slate-400">{t("product.seller")}</span>
+                <span className="font-medium text-slate-800">{product.company?.name}</span>
+                {product.company?.is_verified && <span className="badge bg-emerald-50 text-emerald-700">{t("product.verified")}</span>}
+              </div>
+            )}
             <p className="mt-4 text-slate-600 leading-relaxed">{product.description}</p>
           </div>
 

@@ -21,6 +21,7 @@ export interface Product {
   is_b2b_only: boolean;
   category_id: number | null;
   company_id: number | null;
+  company?: { id: number; name: string; slug: string; is_verified: boolean } | null;
   image: string | null;
   images?: { url: string; alt: string | null; is_primary: boolean }[];
   price: Price;
@@ -59,6 +60,11 @@ export interface Language {
   name: string;
   native_name: string;
   is_default: boolean;
+}
+
+export interface AppSettings {
+  mode: "b2c" | "b2b";
+  show_company_names: boolean;
 }
 
 export interface User {
@@ -144,6 +150,7 @@ export interface AdminProduct {
   is_active: boolean;
   category_id: number | null;
   category?: { id: number; name: string } | null;
+  company?: { id: number; name: string } | null;
   images?: { id: number; url: string }[];
 }
 
@@ -242,6 +249,7 @@ export const api = {
   categories: () => request<Category[]>(`/categories`),
   currencies: () => request<Currency[]>(`/currencies`),
   languages: () => request<Language[]>(`/languages`),
+  settings: () => request<AppSettings>(`/settings`),
   gateways: () => request<{ default: string; available: string[] }>(`/payment-gateways`),
 
   login: (email: string, password: string) =>
@@ -270,6 +278,9 @@ export const api = {
 
 export const adminApi = {
   dashboard: () => request<Dashboard>(`/admin/dashboard`),
+  settings: () => request<AppSettings>(`/admin/settings`),
+  saveSettings: (payload: Pick<AppSettings, "mode">) =>
+    request<AppSettings>(`/admin/settings`, { method: "PUT", body: JSON.stringify(payload) }),
 
   users: (params: Params) => request<Page<AdminUser>>(`/admin/users${qs(params)}`),
   saveUser: (id: number | null, payload: Record<string, unknown>) =>

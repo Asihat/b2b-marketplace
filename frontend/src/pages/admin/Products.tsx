@@ -3,6 +3,7 @@ import { adminApi, type AdminProduct, type AdminCategory, type Page } from "../.
 import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { ProductPricesModal } from "./ProductPricesModal";
+import { useStore } from "../../store";
 
 type Draft = Partial<AdminProduct>;
 type ProductFilter = "all" | "active" | "hidden" | "b2b";
@@ -19,6 +20,7 @@ function pageNumbers(currentPage: number, lastPage: number) {
 }
 
 export function Products() {
+  const { settings } = useStore();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [meta, setMeta] = useState<Page<AdminProduct> | null>(null);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -110,6 +112,8 @@ export function Products() {
   const currentPage = meta?.current_page ?? page;
   const lastPage = meta?.last_page ?? 1;
   const total = meta?.total ?? products.length;
+  const showSeller = settings.show_company_names;
+  const tableColSpan = showSeller ? 9 : 8;
   const activeCount = products.filter((p) => p.is_active).length;
   const hiddenCount = products.filter((p) => !p.is_active).length;
   const b2bCount = products.filter((p) => p.is_b2b_only).length;
@@ -191,6 +195,7 @@ export function Products() {
               <th className="px-4 py-2">SKU</th>
               <th className="px-4 py-2">Product</th>
               <th className="px-4 py-2">Category</th>
+              {showSeller && <th className="px-4 py-2">Seller</th>}
               <th className="px-4 py-2 text-right">Price</th>
               <th className="px-4 py-2 text-right">Stock</th>
               <th className="px-4 py-2">Flags</th>
@@ -199,10 +204,10 @@ export function Products() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400">Loading products...</td></tr>
+              <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-slate-400">Loading products...</td></tr>
             )}
             {!loading && listError && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-rose-600">{listError}</td></tr>
+              <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-rose-600">{listError}</td></tr>
             )}
             {!loading && !listError && products.map((p) => (
               <tr key={p.id} className="border-t border-slate-100">
@@ -221,6 +226,7 @@ export function Products() {
                   <div className="text-xs text-slate-400">{p.brand || "No brand"} · MOQ {p.min_order_qty}</div>
                 </td>
                 <td className="px-4 py-2 text-slate-500">{p.category?.name ?? "—"}</td>
+                {showSeller && <td className="px-4 py-2 text-slate-500">{p.company?.name ?? "—"}</td>}
                 <td className="px-4 py-2 text-right font-medium">{Number(p.base_price).toFixed(2)}</td>
                 <td className="px-4 py-2 text-right">
                   <span className={p.stock <= 0 ? "text-rose-600 font-medium" : p.stock <= p.min_order_qty ? "text-amber-600 font-medium" : ""}>
@@ -239,7 +245,7 @@ export function Products() {
               </tr>
             ))}
             {!loading && !listError && products.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400">No products match these filters.</td></tr>
+              <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-slate-400">No products match these filters.</td></tr>
             )}
           </tbody>
         </table>

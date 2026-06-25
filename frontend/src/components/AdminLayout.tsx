@@ -9,6 +9,7 @@ const NAV: { to: string; label: string; icon: string; end?: boolean }[] = [
   { to: "/admin/users", label: "Users", icon: "👤" },
   { to: "/admin/companies", label: "Companies", icon: "🏢" },
   { to: "/admin/currencies", label: "Currencies", icon: "💱" },
+  { to: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
 export function AdminLayout() {

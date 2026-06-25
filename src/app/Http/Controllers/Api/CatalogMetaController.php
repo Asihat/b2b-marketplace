@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Currency;
 use App\Models\Language;
+use App\Services\MarketplaceSettings;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,6 +14,11 @@ use Illuminate\Http\JsonResponse;
  */
 class CatalogMetaController extends Controller
 {
+    public function settings(): JsonResponse
+    {
+        return response()->json(app(MarketplaceSettings::class)->publicSettings());
+    }
+
     public function categories(): JsonResponse
     {
         $categories = Category::where('is_active', true)

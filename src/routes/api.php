@@ -20,6 +20,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/categories', [CatalogMetaController::class, 'categories']);
 Route::get('/currencies', [CatalogMetaController::class, 'currencies']);
 Route::get('/languages', [CatalogMetaController::class, 'languages']);
+Route::get('/settings', [CatalogMetaController::class, 'settings']);
 Route::get('/payment-gateways', [PaymentController::class, 'gateways']);
 
 Route::get('/products', [ProductController::class, 'index']);
@@ -52,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
 */
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(function () {
     Route::get('/dashboard', [Admin\DashboardController::class, 'index']);
+    Route::get('/settings', [Admin\SettingController::class, 'index']);
+    Route::put('/settings', [Admin\SettingController::class, 'update']);
 
     Route::get('/users', [Admin\UserController::class, 'index']);
     Route::post('/users', [Admin\UserController::class, 'store']);
