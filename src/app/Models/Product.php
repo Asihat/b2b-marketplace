@@ -55,6 +55,11 @@ class Product extends Model
         return $this->hasMany(ProductPrice::class);
     }
 
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     /** Products that are analogs of this product. */
     public function analogs(): BelongsToMany
     {
@@ -82,10 +87,58 @@ class Product extends Model
     }
 
     /** Sort by a whitelisted column/direction (guards against SQL injection). */
-    public function scopeSorted(Builder $query, ?string $column, ?string $direction): Builder
+    public static function effectivePriceSql(): string
     {
+        return <<<'SQL'
+COALESCE(
+    (
+        SELECT pp.price
+        FROM product_prices pp
+        WHERE pp.product_id = products.id
+          AND pp.currency_code = ?
+          AND pp.min_qty <= ?
+        ORDER BY pp.min_qty DESC
+        LIMIT 1
+    ),
+    (
+        SELECT bp.price
+        FROM product_prices bp
+        WHERE bp.product_id = products.id
+          AND bp.currency_code = ?
+          AND bp.min_qty <= ?
+        ORDER BY bp.min_qty DESC
+        LIMIT 1
+    ),
+    products.base_price
+)
+SQL;
+    }
+
+    /** @return array<int, string|int> */
+    public static function effectivePriceBindings(string $currency, int $qty): array
+    {
+        $baseCode = app(\App\Services\CurrencyService::class)->base()['code'];
+
+        return [strtoupper($currency), $qty, $baseCode, $qty];
+    }
+
+    public function scopeSorted(Builder $query, ?string $column, ?string $direction, ?string $currency = null, int $qty = 1): Builder
+    {
+        if ($column === 'popular') {
+            return $query
+                ->withSum('orderItems as sold_qty', 'quantity')
+                ->orderByDesc('sold_qty')
+                ->orderBy('name');
+        }
+
         $column = in_array($column, ['name', 'base_price', 'stock', 'created_at'], true) ? $column : 'name';
         $direction = strtolower((string) $direction) === 'desc' ? 'desc' : 'asc';
+
+        if ($column === 'base_price' && $currency !== null) {
+            return $query
+                ->orderByRaw(self::effectivePriceSql().' '.$direction, self::effectivePriceBindings($currency, $qty))
+                ->orderBy('name');
+        }
 
         return $query->orderBy($column, $direction);
     }

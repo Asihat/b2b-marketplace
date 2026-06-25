@@ -134,7 +134,9 @@ export interface AdminProduct {
   sku: string;
   slug: string;
   name: string;
+  description?: string | null;
   brand: string | null;
+  unit?: string;
   base_price: string;
   stock: number;
   min_order_qty: number;

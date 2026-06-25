@@ -17,8 +17,10 @@ class ProductController extends Controller
             ->with(['category:id,name', 'company:id,name', 'images'])
             ->search($request->query('search'))
             ->when($request->query('category_id'), fn ($q, $id) => $q->where('category_id', $id))
+            ->when($request->filled('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->when($request->filled('is_b2b_only'), fn ($q) => $q->where('is_b2b_only', $request->boolean('is_b2b_only')))
             ->latest()
-            ->paginate(20);
+            ->paginate(min(100, (int) $request->query('per_page', 20)));
 
         return response()->json($products);
     }

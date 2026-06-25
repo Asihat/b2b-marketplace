@@ -16,6 +16,11 @@ class ProductController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $currency = strtoupper((string) $request->query('currency', $request->user()?->currency ?? 'USD'));
+        $qty = max(1, (int) $request->query('qty', 1));
+        $priceSql = Product::effectivePriceSql();
+        $priceBindings = Product::effectivePriceBindings($currency, $qty);
+
         $products = Product::query()
             ->active()
             ->visibleTo($request->user())
@@ -24,8 +29,10 @@ class ProductController extends Controller
             ->when($request->query('category_id'), fn ($q, $id) => $q->where('category_id', $id))
             ->when($request->query('brand'), fn ($q, $brand) => $q->where('brand', $brand))
             ->when($request->query('company_id'), fn ($q, $id) => $q->where('company_id', $id))
+            ->when($request->filled('min_price'), fn ($q) => $q->whereRaw($priceSql.' >= ?', [...$priceBindings, max(0, (float) $request->query('min_price'))]))
+            ->when($request->filled('max_price'), fn ($q) => $q->whereRaw($priceSql.' <= ?', [...$priceBindings, max(0, (float) $request->query('max_price'))]))
             ->when($request->boolean('in_stock'), fn ($q) => $q->where('stock', '>', 0))
-            ->sorted($request->query('sort'), $request->query('direction'))
+            ->sorted($request->query('sort'), $request->query('direction'), $currency, $qty)
             ->paginate(min(100, (int) $request->query('per_page', 20)));
 
         return ProductResource::collection($products);
