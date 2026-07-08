@@ -39,7 +39,13 @@ interface StoreState {
 }
 
 const StoreContext = createContext<StoreState | null>(null);
-const DEFAULT_SETTINGS: AppSettings = { mode: "b2c", show_company_names: false };
+const DEFAULT_SETTINGS: AppSettings = {
+  mode: "b2c",
+  show_company_names: false,
+  icon_url: null,
+  company_name: "Marketplace",
+  company_description: "B2B and B2C marketplace",
+};
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState(localStorage.getItem("currency") ?? "USD");
@@ -66,6 +72,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  useEffect(() => {
+    let icon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!settings.icon_url) {
+      icon?.remove();
+      return;
+    }
+    if (!icon) {
+      icon = document.createElement("link");
+      icon.rel = "icon";
+      document.head.appendChild(icon);
+    }
+    icon.href = settings.icon_url;
+  }, [settings.icon_url]);
+
+  useEffect(() => {
+    document.title = settings.company_name;
+    let description = document.querySelector<HTMLMetaElement>("meta[name='description']");
+    if (!description) {
+      description = document.createElement("meta");
+      description.name = "description";
+      document.head.appendChild(description);
+    }
+    description.content = settings.company_description;
+  }, [settings.company_name, settings.company_description]);
 
   // Load public website configuration.
   useEffect(() => {

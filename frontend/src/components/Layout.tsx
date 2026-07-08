@@ -5,7 +5,7 @@ import { useStore } from "../store";
 import { useT } from "../i18n";
 
 export function Layout() {
-  const { currency, setCurrency, locale, setLocale, user, logout, cartCount } = useStore();
+  const { currency, setCurrency, locale, setLocale, user, logout, cartCount, settings } = useStore();
   const t = useT();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -27,10 +27,12 @@ export function Layout() {
       <header className="glass sticky top-0 z-20 border-b border-slate-900/[0.06]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-5">
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <span className="grid place-items-center w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white text-sm shadow-sm shadow-brand-600/30">
-              ◆
-            </span>
-            <span className="text-[15px] font-semibold tracking-tight text-slate-900">Marketplace</span>
+            {settings.icon_url ? (
+              <img src={settings.icon_url} alt={settings.company_name} className="w-8 h-8 rounded-xl object-contain" />
+            ) : (
+              <span className="grid place-items-center w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white text-sm shadow-sm shadow-brand-600/30">◆</span>
+            )}
+            <span className="text-[15px] font-semibold tracking-tight text-slate-900">{settings.company_name}</span>
           </Link>
 
           <nav className="hidden sm:flex items-center gap-5">
@@ -95,7 +97,7 @@ export function Layout() {
 
       <footer className="border-t border-slate-900/[0.06] mt-8">
         <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-          <span>© {new Date().getFullYear()} Marketplace — {t("footer.tagline")}</span>
+          <span>© {new Date().getFullYear()} {settings.company_name} — {settings.company_description || t("footer.tagline")}</span>
           <span>Laravel · Octane · React · Tailwind</span>
         </div>
       </footer>

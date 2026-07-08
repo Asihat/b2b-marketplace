@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'company_name' => env('MARKETPLACE_COMPANY_NAME', 'Marketplace'),
+    'company_description' => env('MARKETPLACE_COMPANY_DESCRIPTION', 'B2B and B2C marketplace'),
+
     /*
     |--------------------------------------------------------------------------
     | Marketplace Mode

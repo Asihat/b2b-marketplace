@@ -13,7 +13,7 @@ const NAV: { to: string; label: string; icon: string; end?: boolean }[] = [
 ];
 
 export function AdminLayout() {
-  const { user } = useStore();
+  const { user, settings } = useStore();
 
   if (user === null && localStorage.getItem("token")) {
     return <div className="p-10 text-slate-400">Loading…</div>;
@@ -26,8 +26,12 @@ export function AdminLayout() {
     <div className="min-h-screen flex bg-slate-50">
       <aside className="w-60 bg-slate-950 text-slate-300 flex flex-col fixed inset-y-0">
         <div className="px-5 h-16 flex items-center gap-2 border-b border-white/10">
-          <span className="grid place-items-center w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white text-sm">◆</span>
-          <span className="text-base font-semibold text-white tracking-tight">Admin</span>
+          {settings.icon_url ? (
+            <img src={settings.icon_url} alt={settings.company_name} className="w-8 h-8 rounded-xl object-contain bg-white/5" />
+          ) : (
+            <span className="grid place-items-center w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white text-sm">◆</span>
+          )}
+          <span className="text-base font-semibold text-white tracking-tight truncate">{settings.company_name} Admin</span>
         </div>
         <nav className="flex-1 py-3 px-3 space-y-0.5">
           {NAV.map((n) => (

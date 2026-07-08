@@ -65,6 +65,9 @@ export interface Language {
 export interface AppSettings {
   mode: "b2c" | "b2b";
   show_company_names: boolean;
+  icon_url: string | null;
+  company_name: string;
+  company_description: string;
 }
 
 export interface User {
@@ -213,7 +216,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     Accept: "application/json",
     ...(options.headers as Record<string, string>),
   };
-  if (options.body) headers["Content-Type"] = "application/json";
+  if (options.body && !(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
@@ -279,8 +282,14 @@ export const api = {
 export const adminApi = {
   dashboard: () => request<Dashboard>(`/admin/dashboard`),
   settings: () => request<AppSettings>(`/admin/settings`),
-  saveSettings: (payload: Pick<AppSettings, "mode">) =>
+  saveSettings: (payload: Partial<Pick<AppSettings, "mode" | "company_name" | "company_description">>) =>
     request<AppSettings>(`/admin/settings`, { method: "PUT", body: JSON.stringify(payload) }),
+  uploadIcon: (icon: File) => {
+    const body = new FormData();
+    body.append("icon", icon);
+    return request<AppSettings>(`/admin/settings/icon`, { method: "POST", body });
+  },
+  removeIcon: () => request<AppSettings>(`/admin/settings/icon`, { method: "DELETE" }),
 
   users: (params: Params) => request<Page<AdminUser>>(`/admin/users${qs(params)}`),
   saveUser: (id: number | null, payload: Record<string, unknown>) =>

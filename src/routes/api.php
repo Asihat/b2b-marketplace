@@ -55,6 +55,8 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(
     Route::get('/dashboard', [Admin\DashboardController::class, 'index']);
     Route::get('/settings', [Admin\SettingController::class, 'index']);
     Route::put('/settings', [Admin\SettingController::class, 'update']);
+    Route::post('/settings/icon', [Admin\SettingController::class, 'uploadIcon']);
+    Route::delete('/settings/icon', [Admin\SettingController::class, 'removeIcon']);
 
     Route::get('/users', [Admin\UserController::class, 'index']);
     Route::post('/users', [Admin\UserController::class, 'store']);
