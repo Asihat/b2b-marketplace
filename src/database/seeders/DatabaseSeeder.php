@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->seedAnchorProducts($categories, $company);
         $this->seedCatalog($categories, $company);
         $this->seedSecondSupplierProducts($company);
+        $this->call(DemoOrderSeeder::class);
     }
 
     protected function seedCurrencies(): void

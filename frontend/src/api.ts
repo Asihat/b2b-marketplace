@@ -209,7 +209,18 @@ export interface PriceTierInput {
   price: number;
 }
 
+/** A metric for the selected range, its previous-range value, and the % change (null with no baseline). */
+export interface Kpi {
+  current: number;
+  previous: number;
+  change: number | null;
+}
+
 export interface Dashboard {
+  range: { days: number; from: string; to: string };
+  /** Every aggregated money figure below is expressed in this currency. */
+  base_currency: { code: string; symbol: string };
+  kpis: { revenue: Kpi; orders: Kpi; aov: Kpi; new_users: Kpi };
   stats: {
     users: number;
     b2b_users: number;
@@ -220,6 +231,13 @@ export interface Dashboard {
     pending_orders: number;
     revenue_by_currency: Record<string, string>;
   };
+  timeseries: { date: string; orders: number; revenue: number }[];
+  orders_by_status: { status: string; count: number }[];
+  segments: { type: string; orders: number; revenue: number }[];
+  top_products: { id: number | null; sku: string; name: string; qty: number; revenue: number }[];
+  top_categories: { id: number | null; name: string; qty: number; revenue: number }[];
+  gateways: { gateway: string; count: number; amount: number }[];
+  stock: { out_of_stock: number; low_stock: number; inactive: number };
   recent_orders: (Order & { user?: { name: string; email: string } })[];
   low_stock: { id: number; sku: string; name: string; stock: number; min_order_qty: number }[];
 }
@@ -303,7 +321,7 @@ export const api = {
 // ---- Admin API (requires admin role) ----
 
 export const adminApi = {
-  dashboard: () => request<Dashboard>(`/admin/dashboard`),
+  dashboard: (days?: number) => request<Dashboard>(`/admin/dashboard${qs({ days })}`),
   settings: () => request<AppSettings>(`/admin/settings`),
   saveSettings: (payload: Partial<Pick<AppSettings, "mode" | "company_name" | "company_description">>) =>
     request<AppSettings>(`/admin/settings`, { method: "PUT", body: JSON.stringify(payload) }),

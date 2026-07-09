@@ -40,6 +40,11 @@ the app itself** (`GET /img/{seed}`, see `ImageController`) — no external imag
 host, so they always render offline. Swap in your own image URLs anytime via the
 admin Product editor (one URL per line, first = primary).
 
+It also seeds **140 back-dated demo orders** (with payments) spread over the last
+90 days, so the admin dashboard has real trends to plot on a fresh install. That
+step lives in `DemoOrderSeeder`, skips itself when orders already exist, and can
+be run on its own with `php artisan db:seed --class=DemoOrderSeeder`.
+
 ## Seeded demo accounts
 
 | Role          | Email                     | Password   | Type |
@@ -92,8 +97,12 @@ Sign in as the admin account and a **Admin** link appears in the header
 React SPA, guarded client-side by role and server-side by the `EnsureAdmin`
 middleware on every `/api/admin/*` route.
 
-- **Dashboard** — user/order/product counts, pending orders, revenue per
-  currency, recent orders, lowest-stock products
+- **Dashboard** — a 7/30/90-day window with revenue, orders, average order value
+  and new-user KPIs (each against the previous window), a daily revenue/orders
+  trend chart, order-status and B2B-vs-B2C breakdowns, top products and
+  categories, payments per gateway, catalog health, recent orders and
+  lowest-stock products. Orders placed in different currencies are converted to
+  the base currency so every total is comparable.
 - **Orders** — list/filter/search all orders, change status (pending → paid →
   processing → shipped → completed / cancelled)
 - **Products** — full CRUD (price, stock, MOQ, category, B2B-only, active)

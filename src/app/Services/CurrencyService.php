@@ -63,6 +63,17 @@ class CurrencyService
     }
 
     /**
+     * Convert an amount held in $fromCurrency back into the base currency, so
+     * figures stored in mixed currencies (orders, payments) can be summed.
+     */
+    public function toBase(float $amount, string $fromCurrency): float
+    {
+        $rate = $this->rate($fromCurrency);
+
+        return round($rate > 0 ? $amount / $rate : $amount, 2);
+    }
+
+    /**
      * Resolve the unit price of a product for a given quantity.
      *
      * Order of preference: an explicit override the admin entered for the
