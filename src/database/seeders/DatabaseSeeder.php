@@ -8,6 +8,7 @@ use App\Models\Currency;
 use App\Models\Language;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\CurrencyService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -36,6 +37,10 @@ class DatabaseSeeder extends Seeder
         foreach ($currencies as $c) {
             Currency::updateOrCreate(['code' => $c['code']], $c);
         }
+
+        // Rates are cached for an hour; without this, re-seeding leaves the app
+        // converting prices at whatever rates were cached before.
+        app(CurrencyService::class)->flush();
     }
 
     protected function seedLanguages(): void

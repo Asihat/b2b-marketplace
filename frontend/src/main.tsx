@@ -13,6 +13,7 @@ import { AdminLayout } from "./components/AdminLayout";
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Orders as AdminOrders } from "./pages/admin/Orders";
 import { Products as AdminProducts } from "./pages/admin/Products";
+import { ProductEdit as AdminProductEdit } from "./pages/admin/ProductEdit";
 import { Categories as AdminCategories } from "./pages/admin/Categories";
 import { Users as AdminUsers } from "./pages/admin/Users";
 import { Companies as AdminCompanies } from "./pages/admin/Companies";
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "orders", element: <AdminOrders /> },
       { path: "products", element: <AdminProducts /> },
+      { path: "products/:id", element: <AdminProductEdit /> },
       { path: "categories", element: <AdminCategories /> },
       { path: "users", element: <AdminUsers /> },
       { path: "companies", element: <AdminCompanies /> },

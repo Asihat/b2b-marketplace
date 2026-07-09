@@ -86,7 +86,12 @@ class Product extends Model
             ->orWhere('brand', 'ilike', "%{$term}%"));
     }
 
-    /** Sort by a whitelisted column/direction (guards against SQL injection). */
+    /**
+     * The price a buyer in a given currency actually pays, as SQL — used to sort
+     * and filter by price. Mirrors CurrencyService::priceFor(): an override for
+     * the requested currency wins as-is, otherwise a base-currency tier or the
+     * base price is converted at the requested currency's exchange rate.
+     */
     public static function effectivePriceSql(): string
     {
         return <<<'SQL'
@@ -101,7 +106,7 @@ COALESCE(
         LIMIT 1
     ),
     (
-        SELECT bp.price
+        SELECT bp.price * CAST(? AS DECIMAL(18, 8))
         FROM product_prices bp
         WHERE bp.product_id = products.id
           AND bp.currency_code = ?
@@ -109,17 +114,19 @@ COALESCE(
         ORDER BY bp.min_qty DESC
         LIMIT 1
     ),
-    products.base_price
+    products.base_price * CAST(? AS DECIMAL(18, 8))
 )
 SQL;
     }
 
-    /** @return array<int, string|int> */
+    /** @return array<int, string|int|float> */
     public static function effectivePriceBindings(string $currency, int $qty): array
     {
-        $baseCode = app(\App\Services\CurrencyService::class)->base()['code'];
+        $currencies = app(\App\Services\CurrencyService::class);
+        $currency = strtoupper($currency);
+        $rate = $currencies->rate($currency);
 
-        return [strtoupper($currency), $qty, $baseCode, $qty];
+        return [$currency, $qty, $rate, $currencies->base()['code'], $qty, $rate];
     }
 
     public function scopeSorted(Builder $query, ?string $column, ?string $direction, ?string $currency = null, int $qty = 1): Builder

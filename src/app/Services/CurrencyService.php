@@ -50,24 +50,31 @@ class CurrencyService
         return ['code' => config('app.base_currency', 'USD'), 'symbol' => '$', 'exchange_rate' => 1.0, 'is_base' => true];
     }
 
-    /**
-     * Prices are NOT converted by exchange rate — every price is exactly the
-     * value entered in the admin panel. This is kept as an identity helper for
-     * backwards compatibility.
-     */
+    /** How many units of $currency one unit of the base currency buys. */
+    public function rate(string $currency): float
+    {
+        return $this->active()[strtoupper($currency)]['exchange_rate'] ?? 1.0;
+    }
+
+    /** Convert an amount held in the base currency into $toCurrency. */
     public function convert(float $amount, string $toCurrency): float
     {
-        return round($amount, 2);
+        return round($amount * $this->rate($toCurrency), 2);
     }
 
     /**
-     * Resolve the unit price of a product for a given quantity. The amount is
-     * always the admin-entered price (no currency conversion). Order of
-     * preference: an explicit per-currency override for the requested currency,
-     * then a B2B volume tier in the base currency, then the product base price.
+     * Resolve the unit price of a product for a given quantity.
+     *
+     * Order of preference: an explicit override the admin entered for the
+     * requested currency (used verbatim — it is already in that currency), then
+     * a B2B volume tier in the base currency, then the product base price. The
+     * last two live in the base currency, so they are converted at the
+     * requested currency's exchange rate.
      */
     public function priceFor(Product $product, string $currency, int $qty = 1): float
     {
+        $currency = strtoupper($currency);
+
         // 1) Explicit price the admin set for this exact currency + quantity tier.
         $override = ProductPrice::where('product_id', $product->id)
             ->where('currency_code', $currency)
@@ -76,7 +83,7 @@ class CurrencyService
             ->first();
 
         if ($override) {
-            return (float) $override->price;
+            return round((float) $override->price, 2);
         }
 
         // 2) B2B volume tier defined in the base currency (so tiers still apply
@@ -90,12 +97,12 @@ class CurrencyService
                 ->first();
 
             if ($baseTier) {
-                return (float) $baseTier->price;
+                return $this->convert((float) $baseTier->price, $currency);
             }
         }
 
-        // 3) The admin-entered base price, used as-is.
-        return (float) $product->base_price;
+        // 3) The admin-entered base price.
+        return $this->convert((float) $product->base_price, $currency);
     }
 
     public function format(float $amount, string $currency): string

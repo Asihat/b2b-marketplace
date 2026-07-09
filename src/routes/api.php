@@ -69,14 +69,22 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(
 
     Route::get('/products', [Admin\ProductController::class, 'index']);
     Route::post('/products', [Admin\ProductController::class, 'store']);
+    Route::get('/products/{product}', [Admin\ProductController::class, 'show']);
     Route::put('/products/{product}', [Admin\ProductController::class, 'update']);
     Route::delete('/products/{product}', [Admin\ProductController::class, 'destroy']);
 
     // Per-product price overrides & B2B volume tiers.
     Route::get('/products/{product}/prices', [Admin\ProductPriceController::class, 'index']);
+    Route::put('/products/{product}/prices', [Admin\ProductPriceController::class, 'sync']);
     Route::post('/products/{product}/prices', [Admin\ProductPriceController::class, 'store']);
     Route::put('/products/{product}/prices/{price}', [Admin\ProductPriceController::class, 'update']);
     Route::delete('/products/{product}/prices/{price}', [Admin\ProductPriceController::class, 'destroy']);
+
+    // Analog / cross-reference links (kept symmetric on both products).
+    Route::get('/products/{product}/analogs', [Admin\ProductAnalogController::class, 'index']);
+    Route::post('/products/{product}/analogs', [Admin\ProductAnalogController::class, 'store']);
+    Route::put('/products/{product}/analogs/{analog}', [Admin\ProductAnalogController::class, 'update']);
+    Route::delete('/products/{product}/analogs/{analog}', [Admin\ProductAnalogController::class, 'destroy']);
 
     Route::get('/categories', [Admin\CategoryController::class, 'index']);
     Route::post('/categories', [Admin\CategoryController::class, 'store']);

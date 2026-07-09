@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { adminApi, type AdminProduct, type AdminCategory, type Page } from "../../api";
-import { PageHeader, Modal, Field, inputClass, Btn } from "../../components/ui";
+import { PageHeader, inputClass, Btn } from "../../components/ui";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { ProductPricesModal } from "./ProductPricesModal";
 import { useStore } from "../../store";
 
-type Draft = Partial<AdminProduct>;
 type ProductFilter = "all" | "active" | "hidden" | "b2b";
-
-const EMPTY: Draft = {
-  sku: "", name: "", brand: "", description: "", unit: "pcs", base_price: "0", stock: 0, min_order_qty: 1,
-  is_b2b_only: false, is_active: true, category_id: null,
-};
 
 function pageNumbers(currentPage: number, lastPage: number) {
   const start = Math.max(1, currentPage - 2);
@@ -21,6 +15,7 @@ function pageNumbers(currentPage: number, lastPage: number) {
 
 export function Products() {
   const { settings } = useStore();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [meta, setMeta] = useState<Page<AdminProduct> | null>(null);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -28,10 +23,6 @@ export function Products() {
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [filter, setFilter] = useState<ProductFilter>("all");
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<Draft | null>(null);
-  const [imagesText, setImagesText] = useState("");
-  const [pricing, setPricing] = useState<AdminProduct | null>(null);
-  const [error, setError] = useState("");
   const [listError, setListError] = useState("");
   const [loading, setLoading] = useState(true);
   const requestId = useRef(0);
@@ -67,41 +58,9 @@ export function Products() {
       });
   }
 
-  function openEditor(draft: Draft) {
-    setImagesText((draft.images ?? []).map((i) => i.url).join("\n"));
-    setError("");
-    setEditing(draft);
-  }
-
   useEffect(() => { adminApi.categories().then(setCategories).catch(() => {}); }, []);
   useEffect(() => { load(); }, [debouncedSearch, categoryId, filter, page]);
   useEffect(() => { setPage(1); }, [debouncedSearch, categoryId, filter]);
-
-  async function save() {
-    if (!editing) return;
-    setError("");
-    const images = imagesText.split("\n").map((s) => s.trim()).filter(Boolean);
-    try {
-      await adminApi.saveProduct(editing.id ?? null, {
-        sku: editing.sku,
-        name: editing.name,
-        description: editing.description,
-        brand: editing.brand,
-        unit: editing.unit,
-        base_price: Number(editing.base_price),
-        stock: Number(editing.stock ?? 0),
-        min_order_qty: Number(editing.min_order_qty ?? 1),
-        category_id: editing.category_id || null,
-        is_b2b_only: !!editing.is_b2b_only,
-        is_active: !!editing.is_active,
-        images,
-      });
-      setEditing(null);
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
-    }
-  }
 
   async function remove(p: AdminProduct) {
     if (!confirm(`Delete ${p.name}?`)) return;
@@ -126,7 +85,7 @@ export function Products() {
     <div>
       <PageHeader
         title="Products"
-        action={<Btn onClick={() => openEditor({ ...EMPTY })}>+ New product</Btn>}
+        action={<Link to="/admin/products/new" className="btn-primary">+ New product</Link>}
       />
 
       <div className="grid gap-3 sm:grid-cols-3 mb-4">
@@ -210,7 +169,11 @@ export function Products() {
               <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-rose-600">{listError}</td></tr>
             )}
             {!loading && !listError && products.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100">
+              <tr
+                key={p.id}
+                onClick={() => navigate(`/admin/products/${p.id}`)}
+                className="border-t border-slate-100 hover:bg-slate-50/70 cursor-pointer transition"
+              >
                 <td className="px-2 py-2">
                   <div className="w-11 h-11 rounded-lg bg-slate-100 overflow-hidden">
                     {p.images?.[0] ? (
@@ -223,7 +186,10 @@ export function Products() {
                 <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
                 <td className="px-4 py-2">
                   <div className="font-medium text-slate-800">{p.name}</div>
-                  <div className="text-xs text-slate-400">{p.brand || "No brand"} · MOQ {p.min_order_qty}</div>
+                  <div className="text-xs text-slate-400">
+                    {p.brand || "No brand"} · MOQ {p.min_order_qty}
+                    {!!p.analogs_count && ` · ${p.analogs_count} analog${p.analogs_count === 1 ? "" : "s"}`}
+                  </div>
                 </td>
                 <td className="px-4 py-2 text-slate-500">{p.category?.name ?? "—"}</td>
                 {showSeller && <td className="px-4 py-2 text-slate-500">{p.company?.name ?? "—"}</td>}
@@ -237,9 +203,8 @@ export function Products() {
                   {p.is_active ? <span className="badge bg-emerald-50 text-emerald-700">active</span> : <span className="badge bg-slate-200 text-slate-500">hidden</span>}
                   {p.is_b2b_only && <span className="badge bg-amber-100 text-amber-700">B2B</span>}
                 </td>
-                <td className="px-4 py-2 text-right space-x-1 whitespace-nowrap">
-                  <Btn variant="ghost" onClick={() => setPricing(p)}>Prices</Btn>
-                  <Btn variant="ghost" onClick={() => openEditor({ ...p })}>Edit</Btn>
+                <td className="px-4 py-2 text-right space-x-1 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <Link to={`/admin/products/${p.id}`} className="btn-ghost !px-3 !py-1.5">Edit</Link>
                   <Btn variant="danger" onClick={() => remove(p)}>Delete</Btn>
                 </td>
               </tr>
@@ -278,80 +243,6 @@ export function Products() {
           </div>
         </div>
       )}
-
-      {editing && (
-        <Modal title={editing.id ? "Edit product" : "New product"} onClose={() => setEditing(null)}>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="SKU">
-              <input className={inputClass} value={editing.sku ?? ""} onChange={(e) => setEditing({ ...editing, sku: e.target.value })} />
-            </Field>
-            <Field label="Brand">
-              <input className={inputClass} value={editing.brand ?? ""} onChange={(e) => setEditing({ ...editing, brand: e.target.value })} />
-            </Field>
-          </div>
-          <Field label="Name">
-            <input className={inputClass} value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
-          </Field>
-          <Field label="Description">
-            <textarea rows={3} className={inputClass} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
-          </Field>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Field label="Base price">
-              <input type="number" step="0.01" className={inputClass} value={editing.base_price ?? ""} onChange={(e) => setEditing({ ...editing, base_price: e.target.value })} />
-            </Field>
-            <Field label="Stock">
-              <input type="number" className={inputClass} value={editing.stock ?? 0} onChange={(e) => setEditing({ ...editing, stock: Number(e.target.value) })} />
-            </Field>
-            <Field label="Min order qty">
-              <input type="number" className={inputClass} value={editing.min_order_qty ?? 1} onChange={(e) => setEditing({ ...editing, min_order_qty: Number(e.target.value) })} />
-            </Field>
-            <Field label="Unit">
-              <input className={inputClass} value={editing.unit ?? ""} onChange={(e) => setEditing({ ...editing, unit: e.target.value })} />
-            </Field>
-          </div>
-          <Field label="Category">
-            <select className={inputClass} value={editing.category_id ?? ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">— none —</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Image URLs (one per line — first is primary)">
-            <textarea
-              rows={3}
-              className={inputClass + " font-mono text-xs"}
-              placeholder="https://…/image1.jpg&#10;https://…/image2.jpg"
-              value={imagesText}
-              onChange={(e) => setImagesText(e.target.value)}
-            />
-          </Field>
-          {imagesText.trim() && (
-            <div className="flex gap-2 mb-3">
-              {imagesText.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 5).map((url, i) => (
-                <div key={i} className="w-12 h-12 rounded bg-slate-100 overflow-hidden">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-4 mb-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={!!editing.is_b2b_only} onChange={(e) => setEditing({ ...editing, is_b2b_only: e.target.checked })} />
-              B2B only
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={!!editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
-              Active
-            </label>
-          </div>
-          {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
-            <Btn onClick={save}>Save</Btn>
-          </div>
-        </Modal>
-      )}
-
-      {pricing && <ProductPricesModal product={pricing} onClose={() => setPricing(null)} />}
     </div>
   );
 }

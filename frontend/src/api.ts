@@ -155,6 +155,23 @@ export interface AdminProduct {
   category?: { id: number; name: string } | null;
   company?: { id: number; name: string } | null;
   images?: { id: number; url: string }[];
+  prices?: ProductPriceRow[];
+  analogs_count?: number;
+}
+
+export type AnalogType = "equivalent" | "substitute" | "upgrade";
+
+export interface AdminAnalog {
+  id: number;
+  sku: string;
+  slug: string;
+  name: string;
+  brand: string | null;
+  stock: number;
+  is_active: boolean;
+  image: string | null;
+  type: AnalogType;
+  note: string | null;
 }
 
 export interface AdminCategory {
@@ -184,6 +201,12 @@ export interface ProductPriceRow {
   currency_code: string;
   min_qty: number;
   price: string;
+}
+
+export interface PriceTierInput {
+  currency_code: string;
+  min_qty: number;
+  price: number;
 }
 
 export interface Dashboard {
@@ -305,6 +328,7 @@ export const adminApi = {
     request<Order>(`/admin/orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
 
   products: (params: Params) => request<Page<AdminProduct>>(`/admin/products${qs(params)}`),
+  product: (id: number) => request<AdminProduct>(`/admin/products/${id}`),
   saveProduct: (id: number | null, payload: Record<string, unknown>) =>
     request<AdminProduct>(`/admin/products${id ? `/${id}` : ""}`, {
       method: id ? "PUT" : "POST",
@@ -314,13 +338,27 @@ export const adminApi = {
 
   productPrices: (productId: number) =>
     request<ProductPriceRow[]>(`/admin/products/${productId}/prices`),
-  saveProductPrice: (productId: number, id: number | null, payload: Record<string, unknown>) =>
-    request<ProductPriceRow>(`/admin/products/${productId}/prices${id ? `/${id}` : ""}`, {
-      method: id ? "PUT" : "POST",
+  // Replaces the product's whole price grid in a single request.
+  syncProductPrices: (productId: number, prices: PriceTierInput[]) =>
+    request<ProductPriceRow[]>(`/admin/products/${productId}/prices`, {
+      method: "PUT",
+      body: JSON.stringify({ prices }),
+    }),
+
+  productAnalogs: (productId: number) =>
+    request<AdminAnalog[]>(`/admin/products/${productId}/analogs`),
+  addProductAnalog: (productId: number, payload: { analog_id: number; type: AnalogType; note?: string | null }) =>
+    request<AdminAnalog[]>(`/admin/products/${productId}/analogs`, {
+      method: "POST",
       body: JSON.stringify(payload),
     }),
-  deleteProductPrice: (productId: number, id: number) =>
-    request<{ message: string }>(`/admin/products/${productId}/prices/${id}`, { method: "DELETE" }),
+  updateProductAnalog: (productId: number, analogId: number, payload: { type: AnalogType; note?: string | null }) =>
+    request<AdminAnalog[]>(`/admin/products/${productId}/analogs/${analogId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteProductAnalog: (productId: number, analogId: number) =>
+    request<AdminAnalog[]>(`/admin/products/${productId}/analogs/${analogId}`, { method: "DELETE" }),
 
   categories: () => request<AdminCategory[]>(`/admin/categories`),
   saveCategory: (id: number | null, payload: Record<string, unknown>) =>
