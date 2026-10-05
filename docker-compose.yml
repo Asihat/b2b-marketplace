@@ -2,23 +2,22 @@ services:
   app:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
+      dockerfile: docker/go/Dockerfile
     container_name: b2b_app
     restart: unless-stopped
-    working_dir: /var/www/html
-    volumes:
-      - ./src:/var/www/html
     environment:
-      DB_CONNECTION: pgsql
+      APP_URL: ${APP_URL:-http://localhost:8080}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_DATABASE: ${DB_DATABASE:-b2b_marketplace}
       DB_USERNAME: ${DB_USERNAME:-b2b}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
-      CACHE_STORE: file
-      SESSION_DRIVER: file
-      QUEUE_CONNECTION: database
-      OCTANE_SERVER: frankenphp
+      APP_BASE_CURRENCY: ${APP_BASE_CURRENCY:-USD}
+      MARKETPLACE_MODE: ${MARKETPLACE_MODE:-b2b}
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
+    volumes:
+      - appstorage:/app/storage
     expose:
       - "8000"
     depends_on:
@@ -73,3 +72,4 @@ services:
 
 volumes:
   pgdata:
+  appstorage:
